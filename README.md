@@ -23,7 +23,7 @@ Other files not mentioned here are probably obsolete.
 Updating scripts on Wikipedia
 -----------------------------
 
-There are two ways to upload Twinkle scripts to Wikipedia or another destination. You can do it [manually](#manual-synchronization) or with a [Perl script](#synchronization-using-syncpl).
+There are two ways to upload Twinkle scripts to Wikipedia or another destination. You can do it [manually](#manual-synchronization) (recommended) or with a [Perl script](#synchronization-using-syncpl).
 
 After the files are synced, [MediaWiki:Gadgets-definition][] should contain the following lines:
 
@@ -66,17 +66,17 @@ Each Twinkle module and dependency lives on the wiki as a separate file. The lis
 
 There is a synchronization script called `sync.pl`, which can be used to pull and push files to Wikipedia.
 
-The program depends on Perl 5.10 and the modules [`Git::Repository`][Git::Repository] and [`MediaWiki::Bot`][MediaWiki::Bot], which can be installed easily using [`App::cpanminus`][App::cpanminus]:
+The program depends on Perl 5.10 and the modules [`Git::Repository`][Git::Repository] and [`MediaWiki::API`][MediaWiki::API], which can be installed easily using [`App::cpanminus`][App::cpanminus]:
 
-    cpanm --sudo install Git::Repository MediaWiki::Bot
+    cpanm --sudo install Git::Repository MediaWiki::API
 
 Note: On some systems, additional modules such as `File::Slurp`, `Getopt::Long::Descriptive` and other dependencies may need to be installed as well. It is preferred that you install them through your operating system's packaing tool (e.g. `apt-get install libgetopt-long-descriptive-perl`) although you can install them through cpanm too.
 
-When running the program, you can enter your credentials on the command line using the `--username` and `--password` parameters, but it is recommended to save them in a file called `~/.mwbotrc` using the following format:
+When running the program, you can enter your credentials on the command line using the `--username` and `--password` parameters, but it is recommended to save them in a file called `~/.twinklerc` using the following format:
 
-    username => "Username",
-    password => "password",
-    base     => "User::Username"
+    username = Username
+    password = password
+    base     = User:Username
 
 where `base` is the wiki path to prefix the files for `pull` and `push`. If you do not specify the `base` parameter, files will be pushed into the MediaWiki namespace.
 
@@ -142,6 +142,6 @@ Needless to say, there are exceptions. The main sticking point is spacing around
 [User:AzaToth/twinkle.js]: https://en.wikipedia.org/wiki/User:AzaToth/twinkle.js
 [MediaWiki:Gadgets-definition]: https://en.wikipedia.org/wiki/MediaWiki:Gadgets-definition
 [Git::Repository]: https://metacpan.org/pod/Git::Repository
-[MediaWiki::Bot]: https://metacpan.org/pod/MediaWiki::Bot
+[MediaWiki::API]: https://metacpan.org/pod/MediaWiki::API
 [App::cpanminus]: https://metacpan.org/pod/App::cpanminus
 [jq_style]: https://contribute.jquery.org/style-guide/js/
