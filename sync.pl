@@ -79,6 +79,8 @@ my %deploys = (
 	'modules/twinkleprod.js' => 'MediaWiki:Gadget-twinkleprod.js'
 );
 
+my $repo = Git::Repository->new();
+
 my $mw = MediaWiki::API->new({
 			      api_url => "https://$opt->{lang}.$opt->{family}.org/w/api.php",
 			      max_lag => 1000000 # not a botty script, thus smash it!
@@ -86,7 +88,6 @@ my $mw = MediaWiki::API->new({
 $mw->login({lgname => $opt->username, lgpassword => $opt->password})
   or die $mw->{error}->{code} . ': ' . $mw->{error}->{details};
 
-my $repo = Git::Repository->new();
 
 if ( $opt->mode eq 'pull' ) {
   my @status = $repo->run( status => '--porcelain');
@@ -116,11 +117,9 @@ if ( $opt->mode eq 'pull' ) {
   $cmd->close;
 } elsif ( $opt->mode eq 'push' ) {
   while (my($page, $file) = each %pages) {
-    my $tag = $repo->run(describe => '--always', '--all', '--dirty');
-    my $log = $repo->run(log => '-1', '--oneline', '--no-color', $file);
-    $tag =~ m{(?:heads/)?(?<branch>.+)};
     my $text = read_file($file,  {binmode => ':raw' });
-    my $editReturn = editPage($page, decode('UTF-8', $text), "$LAST_PAREN_MATCH{branch}:$log");
+    my $summary = buildEditSummary($file, $page);
+    my $editReturn = editPage($page, decode('UTF-8', $text), $summary);
     if ($editReturn->{_msg} eq 'OK') {
       print "$file successfully pushed to $page\n";
     } else {
@@ -135,10 +134,9 @@ if ( $opt->mode eq 'pull' ) {
     }
     my $page = $deploys{$file};
     print "$file -> $opt->{lang}.$opt->{family}.org/wiki/$page\n";
-    my $tag = $repo->run(describe => '--always', '--dirty');
-    my $log = $repo->run(log => '-1', '--pretty=format:%s', '--no-color');
     my $text = read_file($file,  {binmode => ':raw' });
-    my $editReturn = editPage($page, decode('UTF-8', $text), "$tag: $log");
+    my $summary = buildEditSummary($file, $page);
+    my $editReturn = editPage($page, decode('UTF-8', $text), $summary);
     if ($editReturn->{_msg} eq 'OK') {
       print "$file successfully pushed to $page\n";
     } else {
@@ -149,6 +147,53 @@ if ( $opt->mode eq 'pull' ) {
 
 
 ### SUBROUTINES
+sub buildEditSummary {
+  my ($file, $page) = @_;
+
+  # Find the last edit summary used onwiki, use it to get the changes since then
+  my $ref = $mw->api({
+		      action => 'query',
+		      format => 'json',
+		      prop => 'revisions',
+		      titles => $page,
+		      formatversion => '2',
+		      rvprop => 'comment',
+		      rvlimit => '1'
+		     }) || die "Error querying $page: $mw->{error}->{code}: $mw->{error}->{details}";
+  # my $oldCommitish = @{@{$ref->{query}->{pages}}[0]->{revisions}}[0]->{comment};
+  my $oldCommitish = $ref->{query}->{pages};
+  $oldCommitish = @{$oldCommitish}[0]->{revisions};
+  $oldCommitish = @{$oldCommitish}[0]->{comment};
+
+  my $editSummary = 'Repo at ';
+  $editSummary .= $repo->run('rev-parse' => '--short', 'HEAD');
+  $editSummary .= q{:};
+
+  # User:Amorymeltzer & User:MusikAnimal or User:Amalthea
+  if ($oldCommitish =~ /(?:Repo|v2\.0) at (\w*?): / || $oldCommitish =~ /v2\.0-\d+-g(\w*?): /) {
+    my $newLog = $repo->run(log => '--oneline', '--no-color', "$1..HEAD", 'modules/twinklexfd.js');
+    open my $nl, '<', \$newLog or die $ERRNO;
+    while (<$nl>) {
+      chomp;
+      my @arr = split / /, $_, 2;
+      next if $arr[1] =~ /Merge pull request #\d+/;
+
+      if ($arr[1] =~ /(\w+(?:\.(?:js|css))?) ?[:|-] (.*)/) {
+	$editSummary =~ s/\.$//; # Just in case
+	$editSummary .= " $2;";
+      }
+    }
+    close $nl or die $ERRNO;
+
+    $editSummary =~ s/\;$//;
+  } else {
+    print "Error generating edit summary for $file, please enter one now\n";
+    $editSummary = <STDIN>;
+    chomp $editSummary;
+  }
+  return $editSummary;
+}
+
 sub editPage {
   my ($pTitle, $nText, $pSummary) = @_;
   my $ref = $mw->get_page( { title => $pTitle } );
