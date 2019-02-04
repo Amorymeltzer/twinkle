@@ -22,6 +22,9 @@ use Getopt::Long::Descriptive;
 my $config_file = "$ENV{HOME}/.twinklerc";
 my %conf = ParseConfig($config_file);
 
+use Data::Dumper;
+print Dumper(\%conf);
+
 my ($opt, $usage) = describe_options(
     "$PROGRAM_NAME %o <files...>",
     ['username|u=s', 'username for account on wikipedia', {default => $conf{username} // q{}}],
@@ -44,6 +47,8 @@ my ($opt, $usage) = describe_options(
     [],
     ['help', 'print usage message and exit'],
 );
+print "\nOPTIONS\n";
+print Dumper($opt);
 
 if ($opt->help || !scalar @ARGV) {
   print $usage->text;
@@ -96,10 +101,10 @@ if ( $opt->mode eq 'pull' ) {
     print "repository is not clean. aborting...\n";
     exit;
   }
-
   while (my($page, $file) = each %pages) {
     print "Grabbing $page\n";
     my $wikiPage = $mw->get_page( { title => $page } );
+    print Dumper(\$wikiPage);
     if (defined $wikiPage->{missing}) {
       print "$page does not exist\n";
       exit 1;
@@ -168,6 +173,8 @@ sub buildEditSummary {
   my $editSummary = 'Repo at ';
   $editSummary .= $repo->run('rev-parse' => '--short', 'HEAD');
   $editSummary .= q{:};
+
+  print "oldcomit\t$oldCommitish\n";
 
   # User:Amorymeltzer & User:MusikAnimal or User:Amalthea
   if ($oldCommitish =~ /(?:Repo|v2\.0) at (\w*?): / || $oldCommitish =~ /v2\.0-\d+-g(\w*?): /) {
