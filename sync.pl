@@ -32,18 +32,15 @@ my ($opt, $usage) = describe_options(
     ['base|b=s', 'base location on wikipedia where files exist (default User:AzaToth or entry in .twinklerc)', {default => $conf{base} // 'User:AzaToth'}],
     ['lang=s', 'Target language', {default => 'test'}],
     ['family=s', 'Target family', {default => 'wikipedia'}],
-    [],
     ['mode' => hidden =>
         {
             required => 1,
             one_of => [
-                ['pull' => 'pull changes from wikipedia'],
-                ['push' => 'push changes to wikipedia'],
-                ['deploy' => 'push changes to wikipedia as gadgets']
+                ['deploy' => 'push all files'],
+                ['push' => 'push selected files']
             ]
         }
     ],
-    ['strip', 'strip line end spaces'],
     [],
     ['help', 'print usage message and exit'],
 );
@@ -55,7 +52,7 @@ if ($opt->help || !scalar @ARGV) {
   exit;
 }
 
-my %pages = map {+"$opt->{base}/$_" => $_} @ARGV;
+my @pages;
 my %deploys = (
 	'twinkle.js' => 'MediaWiki:Gadget-Twinkle.js',
 	'twinkle.css' => 'MediaWiki:Gadget-Twinkle.css',
@@ -85,6 +82,12 @@ my %deploys = (
 );
 
 my $repo = Git::Repository->new();
+# Ensure we've got a working/clean master branch
+my $status = $repo->run('status');
+if ($status !~ /On branch master/ || $status !~ /nothing to commit, working tree clean/) {
+  print "Not on branch 'master' or repository is not clean, aborting...\n";
+  exit 1;
+}
 
 my $mw = MediaWiki::API->new({
 			      api_url => "https://$opt->{lang}.$opt->{family}.org/w/api.php",
@@ -93,60 +96,25 @@ my $mw = MediaWiki::API->new({
 $mw->login({lgname => $opt->username, lgpassword => $opt->password})
   or die $mw->{error}->{code} . ': ' . $mw->{error}->{details};
 
-
-if ( $opt->mode eq 'pull' ) {
-  my @status = $repo->run( status => '--porcelain');
-
-  if ( scalar @status ) {
-    print "repository is not clean. aborting...\n";
-    exit;
+if ($opt->mode eq 'deploy') {
+  @pages = keys %deploys;
+} elsif ($opt->mode eq 'push') {
+  @pages = @ARGV;
+}
+foreach my $file (@pages) {
+  if (!defined $deploys{$file}) {
+    print "$file not deployable\n";
+    exit 1;
   }
-  while (my($page, $file) = each %pages) {
-    print "Grabbing $page\n";
-    my $wikiPage = $mw->get_page( { title => $page } );
-    print Dumper(\$wikiPage);
-    if (defined $wikiPage->{missing}) {
-      print "$page does not exist\n";
-      exit 1;
-    } else {
-      my $text = $wikiPage->{q{*}};
-      $text =~ s/\h+$//mg if $opt->{'strip'};
-      write_file( $file, {binmode => ':raw' }, encode('UTF-8',$text));
-    }
-  }
-  my $cmd = $repo->command( diff => '--stat', '--color' );
-  my $s = $cmd->stdout;
-  while (<$s>) {
-    print "$_\n";
-  }
-  $cmd->close;
-} elsif ( $opt->mode eq 'push' ) {
-  while (my($page, $file) = each %pages) {
-    my $text = read_file($file,  {binmode => ':raw' });
-    my $summary = buildEditSummary($file, $page);
-    my $editReturn = editPage($page, decode('UTF-8', $text), $summary);
-    if ($editReturn->{_msg} eq 'OK') {
-      print "$file successfully pushed to $page\n";
-    } else {
-      print "Error pushing $file: $mw->{error}->{code}: $mw->{error}->{details}\n";
-    }
-  }
-} elsif ( $opt->mode eq 'deploy' ) {
-  foreach my $file (values %pages) {
-    if (!defined $deploys{$file}) {
-      print "$file not deployable\n";
-      exit 1;
-    }
-    my $page = $deploys{$file};
-    print "$file -> $opt->{lang}.$opt->{family}.org/wiki/$page\n";
-    my $text = read_file($file,  {binmode => ':raw' });
-    my $summary = buildEditSummary($file, $page);
-    my $editReturn = editPage($page, decode('UTF-8', $text), $summary);
-    if ($editReturn->{_msg} eq 'OK') {
-      print "$file successfully pushed to $page\n";
-    } else {
-      print "Error pushing $file: $mw->{error}->{code}: $mw->{error}->{details}\n";
-    }
+  my $page = $deploys{$file};
+  print "$file -> $opt->{lang}.$opt->{family}.org/wiki/$page\n";
+  my $text = read_file($file,  {binmode => ':raw' });
+  my $summary = buildEditSummary($file, $page);
+  my $editReturn = editPage($page, decode('UTF-8', $text), $summary);
+  if ($editReturn->{_msg} eq 'OK') {
+    print "$file successfully pushed to $page\n";
+  } else {
+    print "Error pushing $file: $mw->{error}->{code}: $mw->{error}->{details}\n";
   }
 }
 
