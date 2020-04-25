@@ -414,7 +414,6 @@ Twinkle.xfd.callback.change_category = function twinklexfdCallbackChangeCategory
 				label: 'Categories for discussion',
 				name: 'work_area'
 			});
-			var isCategory = mw.config.get('wgNamespaceNumber') === 14;
 			var cfd_category;
 			cfd_category = work_area.append({
 				type: 'select',
@@ -423,7 +422,7 @@ Twinkle.xfd.callback.change_category = function twinklexfdCallbackChangeCategory
 				event: function(e) {
 					var value = e.target.value;
 					var target = e.target.form.xfdtarget;
-					// update enabled status
+					// toggle target input
 					if (value === 'cfd' || value === 'sfd-t') {
 						target.disabled = true;
 						target.required = false;
@@ -431,41 +430,44 @@ Twinkle.xfd.callback.change_category = function twinklexfdCallbackChangeCategory
 						target.disabled = false;
 						target.required = true;
 					}
-					if (isCategory) {
-						// update label
-						if (value === 'cfs') {
+					// update label
+					switch (value) {
+						case 'sfd-t': // falls through
+						case 'sfr-t':
+							target.previousSibling.textContent = 'Target stub template: ';
+							break;
+						case 'cfs':
 							target.previousSibling.textContent = 'Target categories: ';
-						} else if (value === 'cfc') {
+							break;
+						case 'cfc':
 							target.previousSibling.textContent = 'Target article: ';
-						} else {
+							break;
+						default:
 							target.previousSibling.textContent = 'Target category: ';
-						}
-						// add/remove extra input box
-						if (value === 'cfs' && $(target.parentNode).find("input[name='xfdtarget2']").length === 0) {
-							var xfdtarget2 = document.createElement('input');
-							xfdtarget2.setAttribute('name', 'xfdtarget2');
-							xfdtarget2.setAttribute('type', 'text');
-							xfdtarget2.setAttribute('required', 'true');
-							target.parentNode.appendChild(xfdtarget2);
-						} else {
-							$(target.parentNode).find("input[name='xfdtarget2']").remove();
-						}
-					} else { // Update stub template label
-						target.previousSibling.textContent = 'Target stub template: ';
+							break;
+					}
+
+					// add/remove extra input box
+					if (value === 'cfs' && $(target.parentNode).find("input[name='xfdtarget2']").length === 0) {
+						var xfdtarget2 = document.createElement('input');
+						xfdtarget2.setAttribute('name', 'xfdtarget2');
+						xfdtarget2.setAttribute('type', 'text');
+						xfdtarget2.setAttribute('required', 'true');
+						target.parentNode.appendChild(xfdtarget2);
+					} else {
+						$(target.parentNode).find("input[name='xfdtarget2']").remove();
 					}
 				}
 			});
 
-			if (isCategory) {
-				cfd_category.append({ type: 'option', label: 'Deletion', value: 'cfd', selected: true });
-				cfd_category.append({ type: 'option', label: 'Merge', value: 'cfm' });
-				cfd_category.append({ type: 'option', label: 'Renaming', value: 'cfr' });
-				cfd_category.append({ type: 'option', label: 'Split', value: 'cfs' });
-				cfd_category.append({ type: 'option', label: 'Convert into article', value: 'cfc' });
-			} else {
-				cfd_category.append({ type: 'option', label: 'Stub Deletion', value: 'sfd-t', selected: true });
-				cfd_category.append({ type: 'option', label: 'Stub Renaming', value: 'sfr-t' });
-			}
+			var isCategory = mw.config.get('wgNamespaceNumber') === 14;
+			cfd_category.append({ type: 'option', label: 'Deletion', value: 'cfd', selected: isCategory });
+			cfd_category.append({ type: 'option', label: 'Merge', value: 'cfm' });
+			cfd_category.append({ type: 'option', label: 'Renaming', value: 'cfr' });
+			cfd_category.append({ type: 'option', label: 'Split', value: 'cfs' });
+			cfd_category.append({ type: 'option', label: 'Convert into article', value: 'cfc' });
+			cfd_category.append({ type: 'option', label: 'Stub Deletion', value: 'sfd-t', selected: !isCategory });
+			cfd_category.append({ type: 'option', label: 'Stub Renaming', value: 'sfr-t' });
 
 			work_area.append({
 				type: 'input',
