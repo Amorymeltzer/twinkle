@@ -8,10 +8,18 @@
 		"lint:fix": "eslint . --fix",
 		"patchtest": "node dev/patch-test.js",
 		"sync": "perl dev/sync.pl",
-		"deployall": "perl dev/sync.pl --mode=deploy --all"
+		"deployall": "perl dev/sync.pl --mode=deploy --all",
+		"wiki": "jsdoc2md --no-gfm --partial dev/jsdocs/main.hbs --helper dev/jsdocs/generatedDate.js --files morebits.js > docs/morebits.md",
+		"ghpages": "jsdoc -c dev/jsdocs/conf.json",
+		"docs": "dev/jsdocs/docs.sh",
+		"jsdoc": "eslint . -c dev/jsdocs/.jsdoc.json"
 	},
 	"devDependencies": {
 		"eslint": "^7.13.0",
-		"eslint-plugin-es5": "^1.5.0"
+		"eslint-plugin-es5": "^1.5.0",
+		"eslint-plugin-jsdoc": "^30.7.8",
+		"jsdoc": "^3.6.6",
+		"jsdoc-baseline": "^0.1.5",
+		"jsdoc-to-markdown": "^6.0.1"
 	}
 }
