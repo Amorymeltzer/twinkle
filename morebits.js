@@ -4358,6 +4358,7 @@ Morebits.status.onError = function(handler) {
 
 Morebits.status.prototype = {
 	stat: null,
+	statRaw: null,
 	text: null,
 	textRaw: null,
 	type: 'status',
@@ -4382,7 +4383,9 @@ Morebits.status.prototype = {
 	},
 
 	/**
-	 * Create a document fragment with the status text
+	 * Create a document fragment with the status text, parsing as HTML
+	 * Runs upon construction for text (part before colon) and upon
+	 * render/update for status (part after colon)
 	 * @param {(string|Element|Array)} obj
 	 * @returns {DocumentFragment}
 	 */
@@ -4393,11 +4396,13 @@ Morebits.status.prototype = {
 		var result;
 		result = document.createDocumentFragment();
 		for (var i = 0; i < obj.length; ++i) {
-			if (typeof obj[i] === 'string') {
-				result.appendChild(document.createTextNode(obj[i]));
-			} else if (obj[i] instanceof Element) {
+			if (obj[i] instanceof Element) {
 				result.appendChild(obj[i]);
-			} // Else cosmic radiation made something shit
+			} else {
+				$.parseHTML(obj[i]).forEach(function(elem) {
+					result.appendChild(elem);
+				});
+			}
 		}
 		return result;
 
@@ -4409,6 +4414,7 @@ Morebits.status.prototype = {
 	 * @param {String} type - 'status' (blue), 'info' (green), 'warn' (red), or 'error' (bold red)
 	 */
 	update: function(status, type) {
+		this.statRaw = status;
 		this.stat = this.codify(status);
 		if (type) {
 			this.type = type;
@@ -4422,7 +4428,7 @@ Morebits.status.prototype = {
 				}
 
 				// also log error messages in the browser console
-				console.error(this.textRaw + ': ' + status); // eslint-disable-line no-console
+				console.error(this.textRaw + ': ' + this.statRaw); // eslint-disable-line no-console
 			}
 		}
 		this.render();
