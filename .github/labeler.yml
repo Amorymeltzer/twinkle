@@ -1,0 +1,12 @@
+'Module: xfd':
+	- modules/twinklexfd.js
+'Module: morebits':
+	- morebits.js
+'Module: config':
+	- modules/twinkleconfig.js
+'Module: fluff':
+	- modules/twinklefluff.js
+'Module: batch':
+	- modules/twinklebatchundelete.js
+	- modules/twinklebatchdelete.js
+	- modules/twinklebatchprotect.js
