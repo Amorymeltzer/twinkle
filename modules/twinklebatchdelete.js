@@ -722,3 +722,4 @@ Twinkle.addInitCallback(Twinkle.batchdelete, 'batchdelete');
 
 
 // </nowiki>
+// test

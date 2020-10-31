@@ -668,3 +668,4 @@ Twinkle.addInitCallback(Twinkle.welcome, 'welcome');
 
 
 // </nowiki>
+// test
