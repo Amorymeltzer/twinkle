@@ -39,8 +39,6 @@ Tests:
   - tests/*
   - scripts/patch-test.js
   - scripts/server.js
-Docs:
-  - './*.md'
 Gadget:
   - gadget.txt
 dependencies:
